@@ -1,37 +1,25 @@
-import { cleanLines } from './model.mjs';
-const input = document.querySelector('#input');
-const output = document.querySelector('#output');
-const status = document.querySelector('#status');
-const copy = document.querySelector('#copy');
-function update() {
-  const result = cleanLines(input.value);
-  output.value = result.text;
-  status.textContent = `${result.count} unique ${result.count === 1 ? 'line' : 'lines'}; ${result.removed} ${result.removed === 1 ? 'duplicate' : 'duplicates'} removed.`;
-  copy.disabled = result.count === 0;
-}
-input.addEventListener('input', update);
-document.querySelector('#sample').addEventListener('click', () => {
-  input.value = '  Halifax\nLangley\nHalifax\n\nVancouver  ';
-  update();
-});
-document.querySelector('#clear').addEventListener('click', () => {
-  input.value = '';
-  update();
-  input.focus();
-});
-if (navigator.clipboard && window.isSecureContext) {
-  copy.hidden = false;
-  copy.disabled = true;
-  copy.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(output.value);
-      status.textContent = 'Result copied.';
-    } catch {
-      output.focus();
-      output.select();
-      status.textContent = 'Copy was unavailable. The result is selected so you can copy it manually.';
-    }
-  });
-}
-// Namespace future preference storage as coolcode:<tool-id>:<key>.
-// Do not persist pasted text or uploads by default.
+import {money,decode,convert,compare,occupations,validateExport,csvCell} from './model.mjs';
+const $=id=>document.getElementById(id),key='coolcode:wagewindow:plans';
+const el=(tag,t)=>{const e=document.createElement(tag);e.textContent=t;return e;};
+let index,config,rows={},plans=[],cache=new Map(),sequence=0,ready=false;
+const regionName=id=>{const r=index.regions[id];return r?`${r.name} · ${r.province}`:id;};
+const val=n=>n===null?'Not published':money(n);
+const unit=e=>e.annual?'year':'hour';
+function inputs(){return {offer:Number($('offer').value),unit:$('offer-unit').value,hours:Number($('hours').value),weeks:Number($('weeks').value)};}
+function chosen(){return [$('region-a').value,$('region-b').value].map(id=>({id,name:regionName(id),estimate:decode(rows[id],index)}));}
+function title(){const n=$('occupation').value;return `${index.occupations[n]?.name||'No matching occupation'} · NOC ${n}`;}
+function renderOccupations(){const selected=$('occupation').value,matches=occupations(index,$('search').value);$('occupation').replaceChildren();for(const [id,x]of matches){const o=el('option',`${x.name} · ${id}`);o.value=id;$('occupation').append(o);}if(matches.some(([id])=>id===selected))$('occupation').value=selected;$('occupation-count').textContent=`(${matches.length} of ${index.occupation_count})`;loadOccupation();}
+async function loadOccupation(){const token=++sequence,noc=$('occupation').value;ready=false;rows={};$('save').disabled=true;$('csv').disabled=true;$('comparison').replaceChildren();$('wages').replaceChildren();$('occupation-title').textContent=title();$('offer-summary').textContent='';if(!noc){$('status').textContent='No occupation matches. Try a broader term or a five-digit NOC code.';return;}try{const shard=noc[0];if(!cache.has(shard)){const response=await fetch(new URL(`./data/${shard}.json?v=${index.data_version}`,import.meta.url));if(!response.ok)throw new Error('Wage rows could not be loaded.');const payload=await response.json();if(payload.data_version!==index.data_version)throw new Error('The public edition changed while this tab was open. Reload to use its matching index and wage rows.');cache.set(shard,payload.occupations);}if(token!==sequence)return;rows=cache.get(shard)[noc]||{};ready=true;$('status').textContent=`${index.occupation_count} occupations · ${index.region_count} regions · ${index.row_count.toLocaleString()} source rows (${index.published_median_count.toLocaleString()} published medians)`;render();table();}catch(e){if(token===sequence)$('status').textContent=e.message+' Please reload or use the official source.';}}
+function render(){if(!ready)return;const cards=$('comparison');cards.replaceChildren();for(const r of chosen()){const a=document.createElement('article');a.append(el('h3',r.name));if(!r.estimate){a.append(el('p','No row in this capture.'));cards.append(a);continue;}const e=r.estimate;if(e.inconsistent)a.append(el('p','Source quality warning: the published low, median and high are out of order. Values are shown as reported; offer comparison is unavailable.'));a.append(el('span',`Median · CAD per ${unit(e)}`),el('strong',val(e.median)),el('p',`Low ${val(e.low)} · High ${val(e.high)}`),el('p',`Reference period: ${e.period==='NA'?'Not available':e.period}`),el('small',`Source: ${e.source||'Not published'} · Revision: ${e.revision||'Not supplied'}`));if(e.comment)a.append(el('p',e.comment));if(e.benefits!==null)a.append(el('small',`${e.benefits}% of employees had non-wage benefits in source data.`));cards.append(a);}offer();}
+function offer(){if(!ready)return;try{const v=inputs();if($('offer').value.trim()===''||$('hours').value.trim()===''||$('weeks').value.trim()==='')throw new Error('Enter an offer, paid hours and paid weeks.');const annual=convert(v.offer,v.unit,'year',v.hours,v.weeks),hourly=convert(v.offer,v.unit,'hour',v.hours,v.weeks);const messages=[`Your assumptions: ${money(hourly)}/hour ≈ ${money(annual)}/year.`];for(const r of chosen()){const c=compare(r.estimate,v.offer,v.unit,v.hours,v.weeks);messages.push(c?`${r.name}: ${money(Math.abs(c.difference))}/${c.unit} ${c.difference<0?'below':c.difference>0?'above':'from'} the published median${c.percent===null?'':` (${Math.abs(c.percent).toFixed(1)}% difference)`}.`:`${r.name}: ${r.estimate?.inconsistent?'published values are inconsistent':'no median available'}; offer comparison unavailable.`);}$('offer-summary').textContent=messages.join(' ');$('save').disabled=chosen().some(r=>!r.estimate);$('csv').disabled=false;}catch(e){$('offer-summary').textContent=e.message;$('save').disabled=true;$('csv').disabled=true;}}
+function table(){const q=$('region-filter').value.toLowerCase(),entries=Object.entries(index.regions).filter(([id])=>regionName(id).toLowerCase().includes(q));$('wages').replaceChildren();for(const [id]of entries){const e=decode(rows[id],index),tr=document.createElement('tr');for(const v of [regionName(id),e?val(e.low):'No row',e?val(e.median):'No row',e?val(e.high):'No row',e?`CAD/${unit(e)}`:'—',e?.period==='NA'?'Not available':e?.period||'—'])tr.append(el('td',v));const td=document.createElement('td'),b=el('button','Use B');b.className='secondary';b.setAttribute('aria-label',`Compare ${regionName(id)}`);b.onclick=()=>{$('region-b').value=id;render();$('region-b').focus();};td.append(b);tr.append(td);$('wages').append(tr);}$('table-caption').textContent=`${entries.length} of ${index.region_count} regions for ${title()} · ${index.edition} edition`;}
+function persist(){try{localStorage.setItem(key,JSON.stringify({schema:1,tool:'wagewindow',plans}));return true;}catch{$('status').textContent='Storage unavailable. Export a copy to keep your comparisons.';return false;}}
+function saved(){const out=$('saved');out.replaceChildren();if(!plans.length)out.append(el('p','No comparisons saved yet.'));plans.forEach((p,i)=>{const a=document.createElement('article');a.append(el('h3',p.name),el('p',p.occupation),el('small',`${p.edition} edition · saved ${p.saved_at?.slice(0,10)||'previously'}`),el('p',`Offer ${money(p.offer)}/${p.unit} · ${p.hours} h/week · ${p.weeks} paid weeks`));for(const r of p.regions){const e=r.estimate;if(e.inconsistent)a.append(el('p','Source quality warning: the published low, median and high are out of order. Values are shown as reported; offer comparison is unavailable.'));a.append(el('p',`${r.name}: median ${val(e.median)}${e.median===null?'':`/${unit(e)}`} · reference ${e.period||'not supplied'}`));}const b=el('button','Remove');b.className='secondary';b.onclick=()=>{plans.splice(i,1);persist();saved();};a.append(b);out.append(a);});}
+function download(name,value,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([value],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+$('save').onclick=()=>{try{if(!ready)return;if(plans.length>=config.max_saved)throw new Error('Export or remove a saved comparison first.');const p={name:$('plan-name').value.trim()||'Wage comparison',occupation:title(),noc:$('occupation').value,regions:chosen(),edition:index.edition,checked_at:index.checked_at,source_url:index.source_url,saved_at:new Date().toISOString(),...inputs()};validateExport({schema:1,tool:'wagewindow',plans:[p]});plans.push(p);const ok=persist();saved();if(ok)$('status').textContent='Comparison saved on this device.';}catch(e){$('status').textContent=e.message;}};
+$('csv').onclick=()=>{if(!ready)return;const v=inputs(),lines=[['Occupation','NOC','Region','Low CAD','Median CAD','High CAD','Unit','Source','Reference period','Revision','Edition','Checked','Offer CAD','Offer unit','Hours/week','Weeks/year','Source URL']];for(const r of chosen()){const e=r.estimate;lines.push([index.occupations[$('occupation').value].name,$('occupation').value,r.name,e?.low,e?.median,e?.high,e?unit(e):'',e?.source,e?.period,e?.revision,index.edition,index.checked_at,v.offer,v.unit,v.hours,v.weeks,index.source_url]);}download('wagewindow-comparison.csv',lines.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');};
+$('export').onclick=()=>download('wagewindow-plans.json',JSON.stringify({schema:1,tool:'wagewindow',plans},null,2),'application/json');
+$('import').onchange=async()=>{try{const f=$('import').files[0];if(!f)return;if(f.size>2000000)throw new Error('Choose a JSON export smaller than 2 MB.');const incoming=validateExport(JSON.parse(await f.text()));if(plans.length+incoming.length>config.max_saved)throw new Error('Import would exceed the saved-comparison limit.');plans.push(...incoming);const ok=persist();saved();if(ok)$('status').textContent=`Imported ${incoming.length} comparisons.`;}catch(e){$('status').textContent=e.message;}finally{$('import').value='';}};
+$('clear').onclick=()=>{plans=[];persist();saved();$('status').textContent='Saved comparisons cleared.';};
+$('search').addEventListener('input',renderOccupations);$('occupation').addEventListener('change',loadOccupation);for(const id of ['region-a','region-b'])$(id).addEventListener('change',render);for(const id of ['offer','offer-unit','hours','weeks'])$(id).addEventListener('input',offer);$('region-filter').addEventListener('input',table);
+try{[index,config]=await Promise.all([fetch('./data/index.json').then(r=>{if(!r.ok)throw new Error('Wage directory is unavailable.');return r.json();}),fetch('./config.json').then(r=>r.json())]);$('edition').textContent=`${index.edition} release · checked ${new Date(index.checked_at).toLocaleString()}`;if(index.status!=='ok'||(Date.now()-Date.parse(index.checked_at))/86400000>config.stale_days)$('edition').append(el('strong',' · Older capture: verify the official dataset.'));$('dataset').href=index.dataset_url;$('download-source').href=index.source_url;for(const id of ['region-a','region-b']){for(const [rid]of Object.entries(index.regions)){const o=el('option',regionName(rid));o.value=rid;$(id).append(o);}}$('region-a').value=config.default_regions[0];$('region-b').value=config.default_regions[1];$('hours').value=config.hours_per_week;$('weeks').value=config.weeks_per_year;try{const raw=localStorage.getItem(key);if(raw)plans=validateExport(JSON.parse(raw));}catch{$('status').textContent='Saved comparisons could not be read; public data remains available.';}for(const [noc,x]of occupations(index,'')){const o=el('option',`${x.name} · ${noc}`);o.value=noc;$('occupation').append(o);}$('occupation').value=index.occupations[config.default_noc]?config.default_noc:Object.keys(index.occupations)[0];$('occupation-count').textContent=`(${index.occupation_count})`;saved();await loadOccupation();}catch(e){$('status').textContent=e.message+' Use the official wage dataset link below.';$('save').disabled=true;}

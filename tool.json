@@ -1,16 +1,22 @@
 {
-  "id": "coolcode-tool-template",
-  "title": "CoolCode Tool Starter",
-  "description": "A browser-only example that trims lines and removes exact duplicates.",
-  "category": "security",
-  "tags": ["text", "lines", "duplicates"],
-  "icon": "scan-search",
-  "url": "/coolcode-tool-template/",
-  "source": "https://github.com/jsdyer/coolcode-tool-template",
+  "id": "wagewindow",
+  "title": "Wage Window",
+  "description": "Compare official Canadian job wages by occupation and region, check an offer, and save private comparisons.",
+  "category": "money",
+  "tags": [
+    "wages",
+    "jobs",
+    "NOC",
+    "salary",
+    "Canada"
+  ],
+  "icon": "wallet",
+  "url": "/wagewindow/",
+  "source": "https://github.com/jsdyer/wagewindow",
   "hosting": "project",
   "access": "browser",
   "data_info": {
-    "mode": "local",
-    "detail": "The browser reads the text you paste and compares its lines."
+    "mode": "snapshot",
+    "detail": "ESDC Job Bank wage estimates for all published occupations and regions, checked weekly; source periods and annual/hourly units are preserved."
   }
 }

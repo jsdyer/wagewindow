@@ -1,0 +1,11 @@
+{
+  "default_noc": "21232",
+  "default_regions": [
+    "ER1250",
+    "ER5920"
+  ],
+  "hours_per_week": 37.5,
+  "weeks_per_year": 52,
+  "max_saved": 100,
+  "stale_days": 16
+}

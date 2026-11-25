@@ -1,21 +1,9 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { cleanLines } from '../web/model.mjs';
-test('trims, removes blanks and preserves first-seen order', () => {
-  assert.deepEqual(cleanLines('  Halifax\nLangley\nHalifax\n\nVancouver  '), {
-    text: 'Halifax\nLangley\nVancouver', count: 3, removed: 1,
-  });
-});
-test('supports Windows and old Mac line endings', () => {
-  assert.equal(cleanLines('a\r\nb\ra').text, 'a\nb');
-});
-test('empty text and whitespace produce an empty result', () => {
-  assert.deepEqual(cleanLines(' \n\t'), { text: '', count: 0, removed: 0 });
-});
-test('preserves case and Unicode', () => {
-  assert.equal(cleanLines('Québec\nquébec\n東京\nQuébec').text, 'Québec\nquébec\n東京');
-});
-test('treats markup as ordinary text', () => {
-  assert.equal(cleanLines('<script>alert(1)</script>\n<script>alert(1)</script>').text, '<script>alert(1)</script>');
-});
-test('rejects non-text input', () => { assert.throws(() => cleanLines(null), TypeError); });
+import test from 'node:test';import assert from 'node:assert/strict';
+import {convert,compare,decode,occupations,validateExport,csvCell} from '../web/model.mjs';
+test('hourly and annual rates convert once under explicit assumptions',()=>{assert.equal(convert(35,'hour','year',40,50),70000);assert.equal(convert(70000,'year','year',40,50),70000);assert.equal(convert(70000,'year','hour',40,50),35);assert.equal(compare({median:70000,annual:true},35,'hour',40,50).difference,0);});
+test('missing estimates remain null and no percentile is invented',()=>{assert.equal(compare({median:null,annual:false},35,'hour',40,50),null);const c=compare({median:20,annual:false},30,'hour',40,50);assert.equal(c.percent,50);assert.equal(c.percentile,undefined);});
+test('published source inconsistencies are preserved but excluded from derived comparisons',()=>{const e=decode([73872,530709,309016,1,0,'2024-2025','2026-11-18',0,null],{sources:['CIHI'],comments:['']});assert.equal(e.median,530709);assert.equal(e.inconsistent,true);assert.equal(compare(e,600000,'year',40,52),null);});
+test('search includes arbitrary added occupations, codes and French titles',()=>{const i={occupations:{99999:{name:'New occupation',name_fr:'Nouvelle profession'}}};assert.equal(occupations(i,'99999').length,1);assert.equal(occupations(i,'Nouvelle').length,1);assert.equal(occupations(i,'unknown').length,0);});
+test('invalid conversion assumptions reject',()=>{for(const x of ['',0,-3,101,Infinity])assert.throws(()=>convert(35,'hour','year',x,52));assert.throws(()=>convert(35,'hour','year',40,53));});
+test('exports preserve earlier capture values and reject malformed data',()=>{const e={low:10,median:20,high:30,annual:false,period:'2021',source:'Old source'},p={name:'old',occupation:'Old job',regions:[{name:'New town',estimate:e},{name:'Old town',estimate:e}],edition:2023,hours:35,weeks:50,offer:25,unit:'hour'};assert.deepEqual(validateExport({schema:1,tool:'wagewindow',plans:[p]}),[p]);assert.throws(()=>validateExport({schema:1,tool:'other',plans:[]}));});
+test('CSV quotes and spreadsheet formula injection are escaped',()=>{assert.equal(csvCell('=1+1'),'"\'=1+1"');assert.equal(csvCell('a"b'),'"a""b"');});

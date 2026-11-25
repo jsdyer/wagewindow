@@ -1,7 +1,8 @@
-// Keep transformations separate from the DOM so they can be tested directly.
-export function cleanLines(text) {
-  if (typeof text !== 'string') throw new TypeError('Expected text');
-  const lines = text.split(/\r\n|\r|\n/).map(line => line.trim()).filter(Boolean);
-  const unique = [...new Set(lines)];
-  return { text: unique.join('\n'), count: unique.length, removed: lines.length - unique.length };
-}
+export const money=n=>new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD',maximumFractionDigits:2}).format(n);
+export function finite(v,min,max){const n=typeof v==='string'&&v.trim()===''?NaN:Number(v);if(!Number.isFinite(n)||n<min||n>max)throw new Error(`Enter a number from ${min} to ${max}.`);return n;}
+export function decode(row,index){if(!row)return null;return {low:row[0],median:row[1],high:row[2],annual:Boolean(row[3]),inconsistent:row.slice(0,3).filter(x=>x!==null).some((x,i,a)=>i>0&&x<a[i-1]),source:index.sources[row[4]],period:row[5],revision:row[6],comment:index.comments[row[7]],benefits:row[8]};}
+export function convert(value,from,to,hours,weeks){if(value===null)return null;hours=finite(hours,1,100);weeks=finite(weeks,1,52);value=finite(value,0,100000000);if(!['hour','year'].includes(from)||!['hour','year'].includes(to))throw new Error('Unsupported wage unit.');return from===to?value:from==='hour'?value*hours*weeks:value/(hours*weeks);}
+export function compare(estimate,offer,unit,hours,weeks){if(!estimate||estimate.median===null||estimate.inconsistent)return null;const amount=convert(finite(offer,0,100000000),unit,estimate.annual?'year':'hour',hours,weeks);return {amount,difference:amount-estimate.median,percent:estimate.median===0?null:(amount/estimate.median-1)*100,unit:estimate.annual?'year':'hour'};}
+export function occupations(index,query){const q=query.toLocaleLowerCase().trim();return Object.entries(index.occupations).filter(([noc,x])=>`${noc} ${x.name} ${x.name_fr}`.toLocaleLowerCase().includes(q));}
+export function validateExport(data){if(!data||data.tool!=='wagewindow'||data.schema!==1||!Array.isArray(data.plans)||data.plans.length>100)throw new Error('Choose a Wage Window export with at most 100 comparisons.');for(const p of data.plans){if(typeof p.name!=='string'||p.name.length>100||typeof p.occupation!=='string'||!Array.isArray(p.regions)||p.regions.length!==2||!Number.isInteger(p.edition))throw new Error('Invalid comparison record.');finite(p.hours,1,100);finite(p.weeks,1,52);finite(p.offer,0,100000000);if(!['hour','year'].includes(p.unit))throw new Error('Invalid offer unit.');for(const r of p.regions){if(typeof r.name!=='string'||!r.estimate||typeof r.estimate.annual!=='boolean')throw new Error('Invalid saved region.');for(const k of ['low','median','high'])if(r.estimate[k]!==null)finite(r.estimate[k],0,100000000);}}return data.plans;}
+export function csvCell(s){let v=String(s??'');if(/^[=+@\-\t\r]/.test(v))v="'"+v;return '"'+v.replaceAll('"','""')+'"';}

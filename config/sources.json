@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "metadata_url": "https://open.canada.ca/data/api/action/package_show?id=adad580f-76b0-4502-bd05-20c125de9116",
+  "dataset_url": "https://open.canada.ca/data/en/dataset/adad580f-76b0-4502-bd05-20c125de9116",
+  "timeout_seconds": 60,
+  "max_metadata_bytes": 2000000,
+  "max_csv_bytes": 35000000,
+  "minimum_rows": 10000,
+  "maximum_rows": 200000
+}
