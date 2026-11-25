@@ -41,7 +41,7 @@ def main():
     page.locator('#import').set_input_files(str(path));page.locator('#saved article').wait_for()
     page.locator('#search').fill('31101')
     page.wait_for_function("document.querySelector('#occupation-title').textContent.includes('31101') && document.querySelectorAll('#wages tr').length>0")
-    page.locator('#region-a').select_option('ER11')
+    page.locator('#region-a').select_option(label='Prince Edward Island · PEI')
     assert 'Source quality warning' in page.locator('#comparison').inner_text()
     assert 'comparison unavailable' in page.locator('#offer-summary').inner_text()
     page.locator('#region-filter').fill('Halifax');assert page.locator('#wages tr').count()==1

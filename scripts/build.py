@@ -102,7 +102,7 @@ def build(root=ROOT):
             page = page.replace(placeholder, markup if on_coolcode else "")
         if re.search(r"\{\{[A-Z_]+\}\}", page):
             raise ValueError("Unresolved template placeholder in web/index.html")
-        page = add_search_metadata(page, tool)
+        page = add_search_metadata(page, tool, category="FinanceApplication")
         index.write_text(page, encoding="utf-8")
         version_assets(stage)
         (stage / ".nojekyll").touch()
