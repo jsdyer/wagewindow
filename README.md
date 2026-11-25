@@ -4,6 +4,7 @@
 
 <!-- coolcode:guide -->
 Wage Window includes every occupation-region row in the ESDC Job Bank wage download, including unavailable estimates. Search by English/French occupation title or NOC code, compare any two regions, inspect low/median/high wages and their own reference periods, or compare a gross offer using your paid hours and weeks. Annual source wages remain annual; missing values stay missing. Optional private comparisons preserve the selected edition and assumptions, survive refreshes and export/import as JSON; current comparisons also export CSV. The official release is checked weekly; failed downloads retain the previous good edition with its original successful check date.
+The raise calculator compares your old and current hourly-equivalent pay with all-items CPI for the exact selected province and months. Separate hours and weeks prevent a longer work week from masquerading as a raise.
 <!-- /coolcode:guide -->
 
 ## Source and coverage
@@ -44,3 +45,9 @@ Builds are offline, publishing `web/` to ignored `dist/`. HTML, CSS, imports, in
 `.github/workflows/pages.yml` checks new editions at **08:43 UTC every Wednesday**, with `workflow_dispatch`. Push/PR builds use committed data. Scheduled/manual runs validate, commit data and deploy in the same workflow. `.github/workflows/schedule-guard.yml` renews the declared collector and itself. No API key, Worker endpoint or repository secret is needed.
 
 Probe `/wagewindow/data/index.json`: `checked_at` successful freshness (warn after 16 days), `status`, `edition`, `row_count`, `occupation_count`, `region_count`, `published_median_count`, `annual_row_count`, `quality_warnings`. Check a listed shard such as `/wagewindow/data/2.json` returns JSON. Register the workflow/guard in the central watchdog and include this repo in its GitHub App installation when restricted to selected repositories.
+
+## Raise and inflation comparison
+
+Monthly all-items CPI comes from [Statistics Canada table 18-10-0004-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401), not seasonally adjusted, 2002=100. Canada, all ten provinces and the three explicitly labelled territorial capital cities are available from 1990 where published. Capital-city values never stand in for a whole territory. The two chosen months must both have numeric values; missing data is not interpolated. CPI change is end/start−1; real hourly pay change is (new hourly/old hourly)/(end CPI/start CPI)−1. Each salary uses its own paid hours and weeks. This is a gross-pay purchasing-power comparison, not tax, investment or individual cost-of-living advice.
+
+`config/cpi.json` defines exact source geographies and first month. Add another geography published in the same table, run `python scripts/refresh_cpi.py`, then test/build/publish as above. The weekly workflow refreshes CPI alongside wages. `web/data/cpi.json` has its own successful `checked_at`, geography-labelled values, published flags and vector IDs. Failed CPI retrieval/validation raises before replacing the old file and blocks the refresh deployment. Personal pay inputs are not saved or sent. Adapted from Statistics Canada under its [Open Licence](https://www.statcan.gc.ca/en/reference/licence).

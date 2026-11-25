@@ -1,7 +1,7 @@
 {
   "id": "wagewindow",
   "title": "Wage Window",
-  "description": "Compare official Canadian job wages by occupation and region, check an offer, and save private comparisons.",
+  "description": "Compare Canadian wages and see whether your raise beat provincial inflation.",
   "category": "money",
   "tags": [
     "wages",
@@ -17,7 +17,7 @@
   "access": "browser",
   "data_info": {
     "mode": "snapshot",
-    "detail": "ESDC Job Bank wage estimates for all published occupations and regions, checked weekly; source periods and annual/hourly units are preserved.",
+    "detail": "ESDC Job Bank wage benchmarks and Statistics Canada monthly provincial CPI support private pay comparisons.",
     "cadence": "Weekly"
   }
 }

@@ -54,6 +54,11 @@ def main():
     page.locator('#region-filter').fill('Halifax');assert page.locator('#wages tr').count()==1
     page.locator('#hours').fill('0');assert page.locator('#save').is_disabled()
     page.locator('#hours').fill('37.5')
+    page.locator('#cpi-geo').select_option('Nova Scotia')
+    page.locator('#old-pay').fill('30');page.locator('#new-pay').fill('30')
+    assert 'purchasing power' in page.locator('#raise-result').inner_text()
+    page.locator('#old-hours').fill('0');assert 'Enter a number' in page.locator('#raise-result').inner_text()
+    page.locator('#old-hours').fill('37.5')
     page.screenshot(path=str(screenshots/'desktop.png'),full_page=True)
     page.set_viewport_size({'width':390,'height':844})
     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')

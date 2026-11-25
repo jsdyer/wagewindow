@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {raiseComparison,cpiPair} from '../web/inflation.mjs';
+const pay=(amount,hours=40,unit='hour')=>({amount,hours,unit,weeks:52});
+test('real pay uses CPI ratio rather than subtracting rates',()=>{const r=raiseComparison(pay(20),pay(22),100,110);assert.ok(Math.abs(r.real)<1e-10);assert.equal(r.needed,22);});
+test('separate work hours prevent overtime from appearing as hourly raise',()=>{const r=raiseComparison(pay(41600,40,'year'),pay(52000,50,'year'),100,100);assert.equal(r.real,0);assert.equal(r.before,20);assert.equal(r.after,20);});
+test('pay cut and deflation, invalid hours and zero original pay',()=>{assert.ok(raiseComparison(pay(20),pay(19),100,90).real>0);assert.throws(()=>raiseComparison(pay(0),pay(2),100,100));assert.throws(()=>raiseComparison(pay(20,0),pay(21),100,100));});
+test('exact months and geography: no nearest observation or national substitution',()=>{const d={series:{'Nova Scotia':{'2025-01':{value:100},'2025-03':{value:110}}}};assert.throws(()=>cpiPair(d,'Nova Scotia','2025-02','2025-03'));assert.throws(()=>cpiPair(d,'Canada','2025-01','2025-03'));assert.throws(()=>cpiPair(d,'Nova Scotia','2025-03','2025-01'));});
