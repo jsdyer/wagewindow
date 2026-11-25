@@ -8,6 +8,10 @@ ROOT=Path(__file__).resolve().parents[1]
 class QuietHandler(SimpleHTTPRequestHandler):
  def log_message(self,*args):pass
 def main():
+ index=json.loads((ROOT/'web/data/index.json').read_text());all_rows={}
+ for shard in index['shards']:all_rows.update(json.loads((ROOT/f'web/data/{shard}.json').read_text())['occupations'])
+ annual_noc,annual_region,annual_row=next((noc,rid,row) for noc,regions in all_rows.items() for rid,row in regions.items() if row[3]==1 and row[1] is not None and rid=='ER00')
+ annual_title=index['occupations'][annual_noc]['name'];annual_median=annual_row[1]
  screenshots=ROOT/'browser-checks';screenshots.mkdir(exist_ok=True)
  with tempfile.TemporaryDirectory() as temporary:
   shutil.copytree(ROOT/'dist',Path(temporary)/'wagewindow')
@@ -22,28 +26,31 @@ def main():
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(f'http://127.0.0.1:{server.server_port}/wagewindow/')
     page.locator('#wages tr').first.wait_for()
-    assert page.locator('#region-a option').count()>=86
-    assert page.locator('#occupation option').count()>=516
+    assert page.locator('#region-a option').count()==index['region_count']
+    assert page.locator('#occupation option').count()==index['occupation_count']
     assert 'Halifax' in page.locator('#comparison').inner_text()
-    page.locator('#search').fill('00010')
-    page.wait_for_function("document.querySelector('#wages').textContent.includes('84,000')")
-    page.locator('#region-a').select_option('ER00')
-    page.locator('#offer-unit').select_option('year');page.locator('#offer').fill('84000')
+    page.locator('#search').fill(annual_noc)
+    page.wait_for_function("document.querySelectorAll('#wages tr').length>0")
+    page.locator('#region-a').select_option(annual_region)
+    page.locator('#offer-unit').select_option('year');page.locator('#offer').fill(str(annual_median))
     assert 'CAD per year' in page.locator('#comparison').inner_text()
-    assert '$84,000.00/year' in page.locator('#offer-summary').inner_text()
+    assert f'${annual_median:,.2f}/year' in page.locator('#offer-summary').inner_text()
     page.locator('#plan-name').fill('<img src=x onerror=alert(1)>');page.locator('#save').click()
     assert page.locator('#saved article').count()==1;assert page.locator('img').count()==0
-    page.reload();page.locator('#saved article').wait_for();assert 'Legislators' in page.locator('#saved').inner_text()
+    page.reload();page.locator('#saved article').wait_for();assert annual_title in page.locator('#saved').inner_text()
     with page.expect_download() as event:page.locator('#export').click()
     path=Path(temporary)/'plans.json';event.value.save_as(path)
     exported=json.loads(path.read_text());assert exported['plans'][0]['regions'][0]['estimate']['annual'] is True
     page.locator('#clear').click();assert page.locator('#saved article').count()==0
     page.locator('#import').set_input_files(str(path));page.locator('#saved article').wait_for()
-    page.locator('#search').fill('31101')
-    page.wait_for_function("document.querySelector('#occupation-title').textContent.includes('31101') && document.querySelectorAll('#wages tr').length>0")
-    page.locator('#region-a').select_option(label='Prince Edward Island · PEI')
-    assert 'Source quality warning' in page.locator('#comparison').inner_text()
-    assert 'comparison unavailable' in page.locator('#offer-summary').inner_text()
+    # A later official edition may correct today's anomaly; never block that refresh.
+    if index.get('quality_warnings'):
+     warning=index['quality_warnings'][0]
+     page.locator('#search').fill(warning['noc'])
+     page.wait_for_function("document.querySelectorAll('#wages tr').length>0")
+     page.locator('#region-a').select_option(warning['region'])
+     assert 'Source quality warning' in page.locator('#comparison').inner_text()
+     assert 'comparison unavailable' in page.locator('#offer-summary').inner_text()
     page.locator('#region-filter').fill('Halifax');assert page.locator('#wages tr').count()==1
     page.locator('#hours').fill('0');assert page.locator('#save').is_disabled()
     page.locator('#hours').fill('37.5')

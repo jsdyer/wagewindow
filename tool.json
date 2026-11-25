@@ -17,6 +17,7 @@
   "access": "browser",
   "data_info": {
     "mode": "snapshot",
-    "detail": "ESDC Job Bank wage estimates for all published occupations and regions, checked weekly; source periods and annual/hourly units are preserved."
+    "detail": "ESDC Job Bank wage estimates for all published occupations and regions, checked weekly; source periods and annual/hourly units are preserved.",
+    "cadence": "Weekly"
   }
 }
