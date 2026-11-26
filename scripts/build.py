@@ -102,6 +102,17 @@ def build(root=ROOT):
             page = page.replace(placeholder, markup if on_coolcode else "")
         if re.search(r"\{\{[A-Z_]+\}\}", page):
             raise ValueError("Unresolved template placeholder in web/index.html")
+        case = json.loads((stage / "use-case.json").read_text(encoding="utf-8"))
+        filename = case["slug"] + ".html"
+        case_tool = {**tool, "title": case["title"], "description": case["description"],
+                     "url": tool["url"] + filename}
+        case_page = re.sub(r"<title>.*?</title>", "<title>" + escape(case["title"]) + " · CoolCode</title>", page, count=1)
+        case_page = re.sub(r"(<h1\b[^>]*>).*?</h1>", lambda match: match[1] + escape(case["title"]) + "</h1>", case_page, count=1, flags=re.S)
+        case_page = case_page.replace('content="' + escape(tool["description"], quote=True) + '"', 'content="' + escape(case["description"], quote=True) + '"', 1)
+        case_page = case_page.replace("<body ", '<body data-use-case="' + escape(case["slug"], quote=True) + '" ', 1)
+        case_links = '<p class="case-description">' + escape(case["description"]) + '</p><p class="task-links"><a href="#old-pay">Compare my raise with inflation</a><a href="./">Open ' + escape(tool["title"]) + '</a></p>'
+        case_page = re.sub(r'<p class="task-links" data-task-links>.*?</p>', lambda _: case_links, case_page, count=1)
+        (stage / filename).write_text(add_search_metadata(case_page, case_tool, category="FinanceApplication"), encoding="utf-8")
         page = add_search_metadata(page, tool, category="FinanceApplication")
         index.write_text(page, encoding="utf-8")
         version_assets(stage)

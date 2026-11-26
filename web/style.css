@@ -3,3 +3,8 @@
 .table-wrap table{min-width:780px}.saved-grid strong{display:block}footer{display:block}footer a{margin-right:.4em}
 
 #raise-form fieldset{min-width:0;border:1px solid #b9cdd1;border-radius:.4rem;padding:1rem}#raise-form legend{font-weight:700;padding:0 .4rem}#raise-form fieldset label{display:block;margin-top:.65rem}
+
+.task-links { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.25rem; margin-block: .85rem; }
+.task-links a { color: inherit; text-decoration: underline; text-underline-offset: .18em; font: inherit; }
+.task-links a:first-child { font-weight: bold; }
+h1 { overflow-wrap: anywhere; }
