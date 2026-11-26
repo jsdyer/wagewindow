@@ -64,7 +64,7 @@ def version_assets(stage):
     # Version imports and config fetches together, so an updated app never imports
     # a still-fresh cached module from the previous release.
     references = re.compile(r"([\"'])(\./[^\"'?]+)\1")
-    for path in [stage / "index.html", *stage.glob("*.mjs")]:
+    for path in [*stage.glob("*.html"), *stage.glob("*.mjs")]:
         path.write_text(references.sub(local_reference, path.read_text(encoding="utf-8")), encoding="utf-8")
     return version
 
